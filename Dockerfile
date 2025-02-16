@@ -2,15 +2,17 @@ FROM node:20.16.0-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
-RUN npm i -g pnpm
+# Use the same pnpm version as your local environment
+RUN corepack enable && corepack prepare pnpm@8.15.4 --activate
 
 FROM base AS build
 COPY . /usr/src/app
 WORKDIR /usr/src/app
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
-
-RUN pnpm run -r build
+# Use cache for both install and build
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile && \
+    pnpm run -r build
 
 RUN pnpm deploy --filter=server --prod /app
 RUN pnpm deploy --filter=server --prod /app-sqlite
@@ -23,6 +25,8 @@ RUN cd /app-sqlite && \
     pnpm exec prisma generate
 
 FROM base AS app-sqlite
+# Reinstall pnpm in final stage
+RUN corepack enable && corepack prepare pnpm@8.15.4 --activate
 COPY --from=build /app-sqlite /app
 
 WORKDIR /app
@@ -31,9 +35,9 @@ EXPOSE 4000
 
 ENV NODE_ENV=production
 ENV HOST="0.0.0.0"
-ENV SERVER_ORIGIN_URL=""
+# ENV SERVER_ORIGIN_URL=""
+# ENV AUTH_CODE=""
 ENV MAX_REQUEST_PER_MINUTE=60
-ENV AUTH_CODE=""
 ENV DATABASE_URL="file:../data/wewe-rss.db"
 ENV DATABASE_TYPE="sqlite"
 
@@ -41,8 +45,9 @@ RUN chmod +x ./docker-bootstrap.sh
 
 CMD ["./docker-bootstrap.sh"]
 
-
 FROM base AS app
+# Reinstall pnpm in final stage
+RUN corepack enable && corepack prepare pnpm@8.15.4 --activate
 COPY --from=build /app /app
 
 WORKDIR /app
@@ -51,11 +56,14 @@ EXPOSE 4000
 
 ENV NODE_ENV=production
 ENV HOST="0.0.0.0"
-ENV SERVER_ORIGIN_URL=""
+# ENV SERVER_ORIGIN_URL=""
+# ENV AUTH_CODE=""
 ENV MAX_REQUEST_PER_MINUTE=60
-ENV AUTH_CODE=""
 ENV DATABASE_URL=""
 
 RUN chmod +x ./docker-bootstrap.sh
 
 CMD ["./docker-bootstrap.sh"]
+
+# Add this label to specify which target to use
+LABEL zeabur.target=app-sqlite
