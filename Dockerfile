@@ -11,7 +11,7 @@ WORKDIR /usr/src/app
 
 # Use cache for both install and build
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile && \
+    pnpm install --force && \
     pnpm run -r build
 
 RUN pnpm deploy --filter=server --prod /app
