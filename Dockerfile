@@ -15,19 +15,16 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm run -r build
 
 RUN pnpm deploy --filter=server --prod /app
-RUN pnpm deploy --filter=server --prod /app-sqlite
 
-RUN cd /app && pnpm exec prisma generate
-
-RUN cd /app-sqlite && \
+RUN cd /app && \
     rm -rf ./prisma && \
     mv prisma-sqlite prisma && \
     pnpm exec prisma generate
 
-FROM base AS app-sqlite
+FROM base AS app
 # Reinstall pnpm in final stage
 RUN corepack enable && corepack prepare pnpm@8.15.4 --activate
-COPY --from=build /app-sqlite /app
+COPY --from=build /app /app
 
 WORKDIR /app
 
@@ -44,26 +41,3 @@ ENV DATABASE_TYPE="sqlite"
 RUN chmod +x ./docker-bootstrap.sh
 
 CMD ["./docker-bootstrap.sh"]
-
-FROM base AS app
-# Reinstall pnpm in final stage
-RUN corepack enable && corepack prepare pnpm@8.15.4 --activate
-COPY --from=build /app /app
-
-WORKDIR /app
-
-EXPOSE 4000
-
-ENV NODE_ENV=production
-ENV HOST="0.0.0.0"
-# ENV SERVER_ORIGIN_URL=""
-# ENV AUTH_CODE=""
-ENV MAX_REQUEST_PER_MINUTE=60
-ENV DATABASE_URL=""
-
-RUN chmod +x ./docker-bootstrap.sh
-
-CMD ["./docker-bootstrap.sh"]
-
-# Add this label to specify which target to use
-LABEL zeabur.target=app-sqlite
