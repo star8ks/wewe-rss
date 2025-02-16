@@ -3,7 +3,7 @@ ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
 # Install specific version of pnpm
-RUN npm install -g pnpm@8.15.0
+RUN npm install -g pnpm@8.15.4
 
 FROM base AS build
 COPY . /usr/src/app
