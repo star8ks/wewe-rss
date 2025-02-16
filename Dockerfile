@@ -2,8 +2,8 @@ FROM node:20.16.0-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
-# Use the same pnpm version as your local environment
-RUN corepack enable && corepack prepare pnpm@8.15.4 --activate
+# Install specific version of pnpm
+RUN npm install -g pnpm@8.15.0
 
 FROM base AS build
 COPY . /usr/src/app
@@ -22,8 +22,7 @@ RUN cd /app && \
     pnpm exec prisma generate
 
 FROM base AS app
-# Reinstall pnpm in final stage
-RUN corepack enable && corepack prepare pnpm@8.15.4 --activate
+# No need to reinstall pnpm as it's already in base
 COPY --from=build /app /app
 
 WORKDIR /app
